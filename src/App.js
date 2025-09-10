@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { FaBoxOpen, FaWarehouse, FaExclamationTriangle, FaMoneyBillWave, FaShoppingCart, FaTrash } from 'react-icons/fa';
+import { FaBoxOpen, FaWarehouse, FaExclamationTriangle, FaMoneyBillWave } from 'react-icons/fa';
 
 const SAMPLE_PRODUCTS = [
   { id: 1, name: 'ท่อเหล็กกลม 3/4"', category: 'Steel', sku: 'ST-074', price: 420, stock: 120, unit: 'ชิ้น', supplier: 'ABC Steel Co.' },
@@ -16,7 +16,6 @@ export default function StockStoreApp() {
   const [category, setCategory] = useState('All');
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [cart, setCart] = useState([]);
-  const [showCart, setShowCart] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [newProduct, setNewProduct] = useState({ name: '', category: '', sku: '', price: '', stock: '', unit: '', supplier: '' });
@@ -36,35 +35,10 @@ export default function StockStoreApp() {
   const totalProducts = products.length;
   const totalStockValue = products.reduce((acc, p) => acc + p.stock * p.price, 0);
 
-  function addToCart(product, qty = 1) {
-    setCart(prev => {
-      const exists = prev.find(i => i.id === product.id);
-      if (exists) return prev.map(i => i.id === product.id ? { ...i, qty: i.qty + qty } : i);
-      return [...prev, { ...product, qty }];
-    });
-  }
+  function addToCart(product, qty = 1) { setCart(prev => { const exists = prev.find(i => i.id === product.id); if (exists) return prev.map(i => i.id === product.id ? { ...i, qty: i.qty + qty } : i); return [...prev, { ...product, qty }]; }); }
+  function exportCSV() { const header = ['id','sku','name','category','price','stock','unit','supplier']; const rows = products.map(p => [p.id,p.sku,p.name,p.category,p.price,p.stock,p.unit,p.supplier]); const csv = [header, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n'); const blob = new Blob([csv], { type: 'text/csv' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'inventory_export.csv'; a.click(); URL.revokeObjectURL(url); }
 
-  function removeFromCart(id) {
-    setCart(prev => prev.filter(i => i.id !== id));
-  }
-
-  function exportQuotation() {
-    const header = ['ชื่อสินค้า', 'SKU', 'จำนวน', 'หน่วย', 'ราคาต่อหน่วย', 'รวม'];
-    const rows = cart.map(c => [c.name, c.sku, c.qty, c.unit, c.price, c.price * c.qty]);
-    const csv = [header, ...rows].map(r => r.join(",")).join("\n");
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'quotation.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  function resetAdminForm() {
-    setNewProduct({ name: '', category: '', sku: '', price: '', stock: '', unit: '', supplier: '' });
-    setEditingProduct(null);
-  }
+  function resetAdminForm() { setNewProduct({ name: '', category: '', sku: '', price: '', stock: '', unit: '', supplier: '' }); setEditingProduct(null); }
 
   function handleAddOrUpdateProduct(e) {
     e.preventDefault();
@@ -75,48 +49,40 @@ export default function StockStoreApp() {
       price: Number(newProduct.price) || 0,
       stock: Number(newProduct.stock) || 0,
       unit: (newProduct.unit || '').trim(),
-      supplier: (newProduct.supplier || '').trim()
+      supplier: (newProduct.supplier || '').trim() 
     };
-    if (editingProduct) {
-      setProducts(prev => prev.map(p => p.id === editingProduct.id ? { ...p, ...parsed } : p));
+    if(editingProduct){
+      setProducts(prev=>prev.map(p=>p.id===editingProduct.id?{...p,...parsed}:p));
     } else {
-      const newId = products.length ? Math.max(...products.map(p => p.id)) + 1 : 1;
-      setProducts(prev => [...prev, { ...parsed, id: newId }]);
+      const newId = products.length ? Math.max(...products.map(p=>p.id))+1 : 1;
+      setProducts(prev=>[...prev,{...parsed,id:newId}]);
     }
     resetAdminForm();
     setShowAdmin(false);
   }
 
-  function handleEditProduct(product) {
+  function handleEditProduct(product){
     setEditingProduct(product);
     setNewProduct({
-      name: product.name || '',
-      category: product.category || '',
-      sku: product.sku || '',
-      price: product.price != null ? String(product.price) : '',
-      stock: product.stock != null ? String(product.stock) : '',
-      unit: product.unit || '',
-      supplier: product.supplier || ''
+      name: product.name||'',
+      category: product.category||'',
+      sku: product.sku||'',
+      price: product.price!=null?String(product.price):'',
+      stock: product.stock!=null?String(product.stock):'',
+      unit: product.unit||'',
+      supplier: product.supplier||''
     });
     setShowAdmin(true);
   }
 
-  function handleDeleteProduct(id) {
-    if (window.confirm('คุณแน่ใจหรือไม่ที่จะลบสินค้านี้?')) {
-      setProducts(prev => prev.filter(p => p.id !== id));
-      if (editingProduct && editingProduct.id === id) {
-        resetAdminForm();
-        setShowAdmin(false);
-      }
+  function handleDeleteProduct(id){
+    if(window.confirm('คุณแน่ใจหรือไม่ที่จะลบสินค้านี้?')){
+      setProducts(prev=>prev.filter(p=>p.id!==id));
+      if(editingProduct&&editingProduct.id===id){ resetAdminForm(); setShowAdmin(false); }
     }
   }
 
-  function handleCancelAdmin() {
-    resetAdminForm();
-    setShowAdmin(false);
-  }
-
-  const cartTotal = cart.reduce((acc, c) => acc + c.price * c.qty, 0);
+  function handleCancelAdmin(){ resetAdminForm(); setShowAdmin(false); }
 
   return (
     <div className="min-h-screen text-gray-200 font-sans" style={{ fontFamily: 'Sarabun, sans-serif', backgroundColor: '#0D1117' }}>
@@ -130,9 +96,7 @@ export default function StockStoreApp() {
           </div>
 
           <div className="flex items-center gap-3 mt-3 md:mt-0">
-            <button onClick={() => setShowCart(true)} className="px-3 py-2 bg-purple-600 text-white rounded shadow-sm text-sm hover:bg-purple-500 transition flex items-center gap-2">
-              <FaShoppingCart /> ใบเสนอราคา ({cart.length})
-            </button>
+            <button onClick={exportCSV} className="px-3 py-2 bg-gray-700 rounded shadow-sm text-sm hover:bg-gray-600 transition">Export CSV</button>
             <button onClick={() => { resetAdminForm(); setShowAdmin(true); }} className="px-3 py-2 bg-blue-600 text-white rounded shadow-sm text-sm hover:bg-blue-500 transition">เพิ่มสินค้า</button>
             <button onClick={() => setShowDashboard(!showDashboard)} className="px-3 py-2 bg-green-600 text-white rounded shadow-sm text-sm hover:bg-green-500 transition">Dashboard</button>
           </div>
@@ -177,8 +141,8 @@ export default function StockStoreApp() {
 
         {/* Filter Section */}
         <div className="flex flex-wrap gap-3 mb-4">
-          <input type="text" value={query} onChange={e => setQuery(e.target.value)} placeholder="ค้นหาสินค้า" className="p-2 rounded  text-white flex-1" style={{ backgroundColor: '#151B23' }} />
-          <select value={category} onChange={e => setCategory(e.target.value)} className="p-2 rounded bg-gray-800 text-white" style={{ backgroundColor: '#151B23' }}>
+          <input type="text" value={query} onChange={e => setQuery(e.target.value)} placeholder="ค้นหาสินค้า" className="p-2 rounded  text-white flex-1" style={{ backgroundColor: '#151B23' }}/>
+          <select value={category} onChange={e => setCategory(e.target.value)} className="p-2 rounded bg-gray-800 text-white"style={{ backgroundColor: '#151B23' }}>
             {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
           </select>
           <label className="flex items-center gap-2">
@@ -198,4 +162,13 @@ export default function StockStoreApp() {
               <p className="text-gray-400 text-sm">ผู้จัดหา: {p.supplier}</p>
 
               <div className="flex gap-2 mt-2">
-                <button onClick={() => addToCart(p)
+                <button onClick={() => handleEditProduct(p)} className="px-2 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-400 transition">แก้ไข</button>
+                <button onClick={() => handleDeleteProduct(p.id)} className="px-2 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-500 transition">ลบ</button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Admin Form Modal */}
+        {showAdmin && (
+          <div className="fixed inset-0 bg-black bg-opacity
